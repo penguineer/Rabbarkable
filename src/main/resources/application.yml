@@ -1,0 +1,27 @@
+micronaut:
+  application:
+    name: Rabbarkable
+  server:
+    port: ${PORT:8080}
+    cors:
+      enabled: true
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /oas3/**
+netty:
+  default:
+    allocator:
+      max-order: 3
+
+endpoints:
+  health:
+    enabled: true
+
+# https://micronaut-projects.github.io/micronaut-rabbitmq/latest/guide/#config
+rabbitmq:
+  host: ${AMQP_HOST}
+  username: ${AMQP_USER:}
+  password: ${AMQP_PASS}
+  virtual-host: ${AMQP_VHOST:/}
