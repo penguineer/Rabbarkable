@@ -1,0 +1,16 @@
+micronaut:
+  application:
+    name: Rabbarkable
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /oas3/**
+netty:
+  default:
+    allocator:
+      max-order: 3
+
+# https://micronaut-projects.github.io/micronaut-rabbitmq/latest/guide/#config
+rabbitmq:
+  enabled: false
