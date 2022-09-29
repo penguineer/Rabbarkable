@@ -25,3 +25,6 @@ rabbitmq:
   username: ${AMQP_USER:}
   password: ${AMQP_PASS}
   virtual-host: ${AMQP_VHOST:/}
+
+rmapi:
+  devicetoken: ${RMAPI_DEVICETOKEN}
