@@ -10,7 +10,10 @@ The connector is configured with environment variables:
 * `AMQP_USER`: RabbitMQ user
 * `AMQP_PASS`: RabbitMQ password
 * `AMQP_VHOST`: RabbitMQ virtual host, defaults to '/'
+* `RMAPI_DEVICETOKEN`: rmapi device token
 * `PORT`: Port for the HTTP endpoint (default `8080`, only change when running locally!)
+
+To obtain the reMarkable device token, you need to register an application with [rmapi](https://github.com/juruen/rmapi) and extract it from your `~/.config/rmapi.conf` file.
 
 ## Deployment
 
