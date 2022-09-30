@@ -62,7 +62,7 @@ public class Session {
         return Mono
                 .justOrEmpty(this.getUserToken()) // use getter to synchronize
                 .filter(UserToken::isValid)
-                .switchIfEmpty(this.renewUserToken())
+                .switchIfEmpty(Mono.defer(this::renewUserToken))
                 .map(UserToken::getToken);
     }
 
