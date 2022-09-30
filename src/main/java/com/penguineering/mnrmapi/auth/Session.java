@@ -8,6 +8,9 @@ import io.micronaut.http.MutableHttpRequest;
 import io.micronaut.http.client.HttpClient;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.validation.constraints.NotNull;
@@ -18,6 +21,8 @@ import static io.micronaut.http.HttpHeaders.AUTHORIZATION;
 @Bean
 @Singleton
 public class Session {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Session.class);
+
     private final String deviceToken;
 
     @Inject
@@ -49,26 +54,26 @@ public class Session {
                         Mono.error(
                                 new Exception("Login returned empty response")))
                 .map(UserToken::withToken)
-                .handle((token, sink) -> {
-                    this.setUserToken(token); // use setter to synchronize
-                    sink.next(token);
-                });
+                .doOnNext(this::setUserToken)
+                .doOnNext(userToken ->
+                        LOGGER.info("User token has been renewed and will expire at {}.", userToken.getExpires()));
     }
 
     protected Mono<String> validUserToken() {
         return Mono
                 .justOrEmpty(this.getUserToken()) // use getter to synchronize
                 .filter(UserToken::isValid)
-                .switchIfEmpty(this.renewUserToken())
+                .switchIfEmpty(Mono.defer(this::renewUserToken))
                 .map(UserToken::getToken);
     }
 
-    public <B> Mono<MutableHttpRequest<B>> userAuthenticatedRequest(Mono<MutableHttpRequest<B>> mono) {
+    public <B> Flux<MutableHttpRequest<B>> userAuthenticatedRequest(Flux<MutableHttpRequest<B>> request) {
         // There might be a race condition if parallel user tokens are not accepted. Need to observe that.
-        return mono
-                .zipWith(
-                        validUserToken(),
-                        (req, token) -> req.header(AUTHORIZATION, "Bearer " + token));
-    }
+        // See https://github.com/penguineer/Rabbarkable/issues/3
 
+        return request
+                // Execute the Mono for each Flux element
+                .flatMap(req -> Mono.just(req).zipWith(validUserToken()))
+                .map(t -> t.getT1().header(AUTHORIZATION, "Bearer " + t.getT2()));
+    }
 }
