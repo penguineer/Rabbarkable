@@ -8,6 +8,8 @@ import io.micronaut.http.MutableHttpRequest;
 import io.micronaut.http.client.HttpClient;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import javax.validation.constraints.NotNull;
@@ -18,6 +20,8 @@ import static io.micronaut.http.HttpHeaders.AUTHORIZATION;
 @Bean
 @Singleton
 public class Session {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Session.class);
+
     private final String deviceToken;
 
     @Inject
@@ -49,10 +53,9 @@ public class Session {
                         Mono.error(
                                 new Exception("Login returned empty response")))
                 .map(UserToken::withToken)
-                .handle((token, sink) -> {
-                    this.setUserToken(token); // use setter to synchronize
-                    sink.next(token);
-                });
+                .doOnNext(this::setUserToken)
+                .doOnNext(userToken ->
+                        LOGGER.info("User token has been renewed and will expire at {}.", userToken.getExpires()));
     }
 
     protected Mono<String> validUserToken() {
