@@ -22,6 +22,10 @@ public class UserToken {
         return token;
     }
 
+    public Instant getExpires() {
+        return expires;
+    }
+
     public boolean isValid() {
         return Instant.now().isBefore(this.expires);
     }
