@@ -27,10 +27,11 @@ public class ServiceDiscovery {
                 .build();
     }
 
-    public Mono<String> fetchNotificationHost() {
+    public Mono<URI> fetchNotificationHost() {
         return Mono
                 .just(this.notificationURI)
-                .transform(this::retrieveHost);
+                .transform(this::retrieveHost)
+                .map(host -> UriBuilder.of("").host(host).scheme("wss").path(Paths.NOTIFY_PATH).build());
     }
 
     public Mono<URI> fetchDocumentAPI() {

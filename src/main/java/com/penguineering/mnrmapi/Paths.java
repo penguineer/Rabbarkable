@@ -13,4 +13,5 @@ public interface Paths {
     String API_DOWNLOAD = API_URL + API_DOWNLOAD_PATH;
     String API_UPLOAD = API_URL +  "/signed-urls/uploads";
     String SYNC_COMPLETE = API_URL + "/sync-complete";
+    String NOTIFY_PATH = "/notifications/ws/json/1";
 }
