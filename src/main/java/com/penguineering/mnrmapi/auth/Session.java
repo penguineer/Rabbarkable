@@ -1,7 +1,7 @@
 package com.penguineering.mnrmapi.auth;
 
-import com.penguineering.mnrmapi.RmApiConfig;
 import com.penguineering.mnrmapi.Discovery;
+import com.penguineering.mnrmapi.RmApiConfig;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpRequest;
@@ -14,6 +14,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.validation.constraints.NotNull;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static io.micronaut.http.HttpHeaders.ACCEPT;
 import static io.micronaut.http.HttpHeaders.AUTHORIZATION;
@@ -31,18 +33,11 @@ public class Session {
     @Inject
     protected Discovery discovery;
 
-    private UserToken userToken; // Note that the token may be accessed in a multithreaded environment
+    transient private UserToken userToken; // Note that the token may be accessed in a multithreaded environment
+    private final Lock userTokenLock = new ReentrantLock();
 
     public Session(@NotNull RmApiConfig config) {
         this.deviceToken = config.getDevicetoken();
-    }
-
-    private synchronized void setUserToken(UserToken userToken) {
-        this.userToken = userToken;
-    }
-
-    private synchronized UserToken getUserToken() {
-        return userToken;
     }
 
     protected Mono<UserToken> renewUserToken() {
@@ -56,17 +51,26 @@ public class Session {
                         Mono.error(
                                 new Exception("Login returned empty response")))
                 .map(UserToken::withToken)
-                .doOnNext(this::setUserToken)
                 .doOnNext(userToken ->
                         LOGGER.info("User token has been renewed and will expire at {}.", userToken.getExpires()));
     }
 
     protected Mono<String> validUserToken() {
-        return Mono
-                .justOrEmpty(this.getUserToken()) // use getter to synchronize
-                .filter(UserToken::isValid)
-                .switchIfEmpty(Mono.defer(this::renewUserToken))
-                .map(UserToken::getToken);
+        return Mono.fromCallable(() -> {
+            userTokenLock.lock();
+            try {
+                if (userToken == null || !userToken.isValid())
+                    // TODO is there a way to do this without blocking in a Callable?
+                    userToken = renewUserToken().block();
+
+                if (userToken == null || userToken.getToken() == null)
+                    throw new IllegalStateException("User token is null");
+
+                return userToken.getToken();
+            } finally {
+                userTokenLock.unlock();
+            }
+        });
     }
 
     public <B> Flux<MutableHttpRequest<B>> userAuthenticatedRequest(Flux<MutableHttpRequest<B>> request) {
