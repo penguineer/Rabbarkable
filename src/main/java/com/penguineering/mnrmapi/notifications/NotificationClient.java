@@ -23,7 +23,7 @@ public class NotificationClient implements AutoCloseable {
      * WebSocket connection times out after 300s
      */
     // TODO make this configurable
-    private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(3000);
+    private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(300);
 
     private WebSocketSession session;
 
@@ -127,16 +127,26 @@ public class NotificationClient implements AutoCloseable {
 
     private Disposable createHeartbeatSubscription() {
         return Flux.interval(Duration.ofSeconds(5))
+                .onBackpressureDrop()
+                .filter(this::assertConnection)
                 .filter(this::isHeartbeatExpired)
                 .flatMap(i -> Mono.justOrEmpty(this))
                 .filter(NotificationClient::isConnected)
                 .flatMap(NotificationClient::sendHeartbeat)
                 .subscribeOn(Schedulers.boundedElastic())
+                .onErrorReturn(false)
                 .subscribe(this::checkHeartbeat);
     }
 
     private synchronized void activity() {
         this.lastActivity = Instant.now();
+    }
+
+    private synchronized boolean assertConnection(long _attempt) {
+        if (!this.isConnected())
+            throw new IllegalStateException("WebSocket session is not open!");
+
+        return true;
     }
 
     private synchronized boolean isHeartbeatExpired(long _attempt) {
