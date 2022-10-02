@@ -1,7 +1,7 @@
 package com.penguineering.mnrmapi.auth;
 
-import com.penguineering.mnrmapi.Paths;
 import com.penguineering.mnrmapi.RmApiConfig;
+import com.penguineering.mnrmapi.discovery.ServiceDiscovery;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpRequest;
@@ -28,6 +28,9 @@ public class Session {
     @Inject
     protected HttpClient httpClient;
 
+    @Inject
+    protected ServiceDiscovery discovery;
+
     private UserToken userToken; // Note that the token may be accessed in a multithreaded environment
 
     public Session(@NotNull RmApiConfig config) {
@@ -43,9 +46,8 @@ public class Session {
     }
 
     protected Mono<UserToken> renewUserToken() {
-        return Mono
-                .just(HttpRequest
-                        .POST(Paths.USER_TOKEN_URI, null)
+        return discovery.fetchUserTokenURI()
+                .map(uri -> HttpRequest.POST(uri, null)
                         .header(ACCEPT, "text/plain")
                         .header(AUTHORIZATION, "Bearer " + deviceToken))
                 .map(httpClient::retrieve)

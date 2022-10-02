@@ -27,6 +27,15 @@ public class ServiceDiscovery {
                 .build();
     }
 
+    /**
+     * Fetch the URI for the token renewal endpoint.
+     *
+     * @return URI to call for token renewal
+     */
+    public Mono<URI> fetchUserTokenURI() {
+        return Mono.just(Paths.USER_TOKEN_URI);
+    }
+
     public Mono<URI> fetchNotificationHost() {
         return Mono
                 .just(this.notificationURI)
