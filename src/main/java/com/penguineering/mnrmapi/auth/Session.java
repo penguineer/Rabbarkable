@@ -20,6 +20,13 @@ import java.util.concurrent.locks.ReentrantLock;
 import static io.micronaut.http.HttpHeaders.ACCEPT;
 import static io.micronaut.http.HttpHeaders.AUTHORIZATION;
 
+/**
+ * Manage User Token subscriptions to the re:markable API.
+ *
+ * <p>User Tokens are retrieved per-session based on the Device Token.</p>
+ *
+ * <p>As User Tokens have a limited life-span, they are automatically renewed on expiry.</p>
+ */
 @Bean
 @Singleton
 public class Session {
@@ -73,10 +80,16 @@ public class Session {
         });
     }
 
+    /**
+     * Add authentication headers with a User Token to a request
+     *
+     * <p>If the token is expired or not available a new token will be issued.</p>
+     *
+     * @param request HttpRequest to decorate
+     * @return Decorated HttpRequest
+     * @param <B> HttpRequest body type
+     */
     public <B> Flux<MutableHttpRequest<B>> userAuthenticatedRequest(Flux<MutableHttpRequest<B>> request) {
-        // There might be a race condition if parallel user tokens are not accepted. Need to observe that.
-        // See https://github.com/penguineer/Rabbarkable/issues/3
-
         return request
                 // Execute the Mono for each Flux element
                 .flatMap(req -> Mono.just(req).zipWith(validUserToken()))
