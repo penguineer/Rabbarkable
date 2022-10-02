@@ -1,6 +1,6 @@
 package com.penguineering.mnrmapi.notifications;
 
-import com.penguineering.mnrmapi.auth.Session;
+import com.penguineering.mnrmapi.Authentication;
 import com.penguineering.mnrmapi.Discovery;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
@@ -34,7 +34,7 @@ public class NotificationAccess implements AutoCloseable {
     Discovery discovery;
 
     @Inject
-    Session session;
+    Authentication auth;
 
     @Inject
     ReactorWebSocketClient webSocketClient;
@@ -87,7 +87,7 @@ public class NotificationAccess implements AutoCloseable {
     private Mono<NotificationClient> connect() {
         return Flux.from(Mono.defer(() -> discovery.fetchNotificationURI()))
                 .map(HttpRequest::GET)
-                .transform(session::userAuthenticatedRequest)
+                .transform(auth::userAuthenticatedRequest)
                 .flatMap(req -> webSocketClient.connect(NotificationClient.class, req))
                 .single()
                 .doOnNext(cl -> LOGGER.info("New re:markable notification connection: {}", cl));

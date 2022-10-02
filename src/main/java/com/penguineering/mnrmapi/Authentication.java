@@ -1,7 +1,6 @@
-package com.penguineering.mnrmapi.auth;
+package com.penguineering.mnrmapi;
 
-import com.penguineering.mnrmapi.Discovery;
-import com.penguineering.mnrmapi.RmApiConfig;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpRequest;
@@ -14,6 +13,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.validation.constraints.NotNull;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -29,8 +30,8 @@ import static io.micronaut.http.HttpHeaders.AUTHORIZATION;
  */
 @Bean
 @Singleton
-public class Session {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Session.class);
+public class Authentication {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Authentication.class);
 
     private final String deviceToken;
 
@@ -43,7 +44,7 @@ public class Session {
     transient private UserToken userToken; // Note that the token may be accessed in a multithreaded environment
     private final Lock userTokenLock = new ReentrantLock();
 
-    public Session(@NotNull RmApiConfig config) {
+    public Authentication(@NotNull RmApiConfig config) {
         this.deviceToken = config.getDevicetoken();
     }
 
@@ -94,5 +95,43 @@ public class Session {
                 // Execute the Mono for each Flux element
                 .flatMap(req -> Mono.just(req).zipWith(validUserToken()))
                 .map(t -> t.getT1().header(AUTHORIZATION, "Bearer " + t.getT2()));
+    }
+
+    /**
+     * Encapsulates the response from a user-token request.
+     */
+    private static class UserToken {
+        // TODO make this configurable
+        public static final Duration VALIDITY = Duration.ofHours(6);
+
+        public static UserToken withToken(String token) {
+            return new UserToken(token, VALIDITY);
+        }
+
+        private final String token;
+        private final Instant expires;
+
+        UserToken(@JsonProperty("token") String token,
+                  @JsonProperty("validity") Duration validity) {
+            this.token = token;
+            this.expires = Instant.now().plus(validity);
+        }
+
+        public String getToken() {
+            return token;
+        }
+
+        public Instant getExpires() {
+            return expires;
+        }
+
+        public boolean isValid() {
+            return Instant.now().isBefore(this.expires);
+        }
+
+        @Override
+        public String toString() {
+            return "User token (expiry %s): %s".formatted(this.expires, this.token);
+        }
     }
 }

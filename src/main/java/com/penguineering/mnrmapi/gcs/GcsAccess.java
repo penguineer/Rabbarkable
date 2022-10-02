@@ -1,6 +1,6 @@
 package com.penguineering.mnrmapi.gcs;
 
-import com.penguineering.mnrmapi.auth.Session;
+import com.penguineering.mnrmapi.Authentication;
 import com.penguineering.mnrmapi.Discovery;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
@@ -18,7 +18,7 @@ public class GcsAccess {
     protected HttpClient httpClient;
 
     @Inject
-    protected Session session;
+    protected Authentication auth;
 
     @Inject
     protected Discovery discovery;
@@ -37,7 +37,7 @@ public class GcsAccess {
                         (body, uri) -> HttpRequest
                                 .POST(uri, body)
                                 .header(ACCEPT, "application/json"))
-                .transform(session::userAuthenticatedRequest)
+                .transform(auth::userAuthenticatedRequest)
                 .map(req -> httpClient.retrieve(req, FileRequestResponse.class))
                 .flatMap(Flux::from)
                 .map(FileRequestResponse::getUrl);
