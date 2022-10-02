@@ -85,14 +85,15 @@ public class Discovery {
                 .just(API_DOWNLOAD);
     }
 
-
     /**
      * Resolve a URI to the endpoint from the discovery service.
      *
      * @param uri URI identifier to resolve
+     * @throws IllegalStateException is emitted if the discovery fails.
      * @return Endpoint URI
      */
     private Mono<String> retrieveHost(Mono<URI> uri) {
+        // TODO we could do with a delayed retry if the first discovery fails
         return uri
                 .map(HttpRequest::GET)
                 .map(req -> httpClient.retrieve(req,  ServiceDiscoveryResult.class))
