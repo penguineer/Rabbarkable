@@ -19,6 +19,8 @@ import reactor.util.function.Tuple2;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.time.Duration;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Bean
 @Singleton
@@ -28,6 +30,7 @@ public class NotificationAccess implements AutoCloseable {
     /**
      * How often to check if the connection needs to be renewed
      */
+    // TODO make this configurable
     private static final Duration CONN_CHECK_INTERVAL = Duration.ofSeconds(1);
 
     @Inject
@@ -40,6 +43,7 @@ public class NotificationAccess implements AutoCloseable {
     ReactorWebSocketClient webSocketClient;
 
     transient private NotificationClient notificationClient = null;
+    private final Lock notificationClientLock = new ReentrantLock();
 
     private Disposable reconnectSubscription = null;
 
@@ -51,37 +55,63 @@ public class NotificationAccess implements AutoCloseable {
         reconnectSubscription = Flux
                 // only emits if there is no connection
                 .interval(CONN_CHECK_INTERVAL)
+                .onBackpressureDrop()
                 .filter(this::needsConnection)
                 // Check periodically if a new connection is needed and
                 // store established connections in `this.notificationClient`.
-                .flatMap(c -> Flux.just(c).zipWith(Mono.defer(this::connect)))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(c -> Flux.just(c).zipWith(Mono.fromCallable(() -> {
+                            notificationClientLock.lock();
+                            try {
+                                return isConnected()
+                                        ? notificationClient
+                                        : this.connect().block();
+                            } finally {
+                                notificationClientLock.unlock();
+                            }
+                        })
+                        .subscribeOn(Schedulers.boundedElastic())))
                 .map(Tuple2::getT2)
                 // The WebSocket implementation returns the client here,
                 // which is called for any message. The Flux generated
                 // in the setup will only return clients, but not actual
                 // messages.
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe(this::setNotificationClient);
+                .subscribe(this::updateNotificationClient);
     }
 
     /**
      * @param _attempt running number of connection check
      * @return true if a new connection is needed
      */
-    private synchronized boolean needsConnection(long _attempt) {
+    private boolean needsConnection(long _attempt) {
         return !isConnected();
     }
 
-    public synchronized boolean isConnected() {
-        return this.notificationClient != null && this.notificationClient.isConnected();
+    public boolean isConnected() {
+        notificationClientLock.lock();
+        try {
+            return this.notificationClient != null && this.notificationClient.isConnected();
+        } finally {
+            notificationClientLock.unlock();
+        }
     }
 
-    private synchronized void setNotificationClient(NotificationClient notificationClient) {
-        if (this.notificationClient != null && this.notificationClient.isConnected())
-            this.notificationClient.close();
+    private void updateNotificationClient(NotificationClient notificationClient) {
+        notificationClientLock.lock();
 
-        this.notificationClient = notificationClient;
-        this.notificationClient.setMessageSink(this.messageSink);
+        try {
+
+            if (notificationClient == this.notificationClient)
+                return; // idempotent setter: do nothing if instances are identical
+
+            if (this.notificationClient != null && this.notificationClient.isConnected())
+                this.notificationClient.close();
+
+            this.notificationClient = notificationClient;
+            this.notificationClient.setMessageSink(this.messageSink);
+        } finally {
+            notificationClientLock.unlock();
+        }
     }
 
     private Mono<NotificationClient> connect() {
