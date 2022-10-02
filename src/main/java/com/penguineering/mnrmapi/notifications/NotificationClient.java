@@ -22,21 +22,18 @@ public class NotificationClient implements AutoCloseable {
     /**
      * WebSocket connection times out after 300s; renew 30s before to be on the safe side.
      */
-    private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(300-30);
+    // TODO make this configurable
+    private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(300);
 
     private WebSocketSession session;
 
-    private Instant lastActivity;
+    transient private Instant lastActivity;
     Disposable heartbeatSubscription = null;
 
     transient private Sinks.Many<NotificationMessage> messageSink = null;
 
     public synchronized void setMessageSink(Sinks.Many<NotificationMessage> messageSink) {
         this.messageSink = messageSink;
-    }
-
-    private void activity() {
-        this.lastActivity = Instant.now();
     }
 
     @OnOpen
@@ -67,6 +64,8 @@ public class NotificationClient implements AutoCloseable {
 
     @OnError
     public void onError(Throwable error) {
+        activity();
+
         synchronized (this) {
             if (this.messageSink != null) {
                 final Sinks.EmitResult er = this.messageSink.tryEmitError(error);
@@ -75,12 +74,11 @@ public class NotificationClient implements AutoCloseable {
             } else
                 LOGGER.warn("Error is discarded as target sink is not available:", error);
         }
-        activity();
     }
 
     @OnClose
     @Override
-    public void close() {
+    public synchronized void close() {
         Duration idle = Duration.between(this.lastActivity, Instant.now());
         LOGGER.info("Session closed after " + idle.toSeconds() + "s idle time.");
 
@@ -105,7 +103,7 @@ public class NotificationClient implements AutoCloseable {
         return Mono.just(heartbeatMessage)
                 .map(this::send)
                 .flatMap(Mono::from)
-                .onErrorReturn(e -> e instanceof WebSocketSessionException, "closed")
+                .onErrorReturn(e -> e instanceof WebSocketSessionException, "failed")
                 .map(heartbeatMessage::equals);
     }
 
@@ -119,7 +117,8 @@ public class NotificationClient implements AutoCloseable {
     }
 
     private Disposable createHeartbeatSubscription() {
-        return Flux.interval(HEARTBEAT_INTERVAL)
+        return Flux.interval(Duration.ofSeconds(5))
+                .filter(this::isHeartbeatExpired)
                 .flatMap(i -> Mono.justOrEmpty(this))
                 .filter(NotificationClient::isConnected)
                 .flatMap(NotificationClient::sendHeartbeat)
@@ -127,9 +126,18 @@ public class NotificationClient implements AutoCloseable {
                 .subscribe(this::checkHeartbeat);
     }
 
+    private synchronized void activity() {
+        this.lastActivity = Instant.now();
+    }
+
+    private synchronized boolean isHeartbeatExpired(long _attempt) {
+        return Instant.now().plusSeconds(20)
+                .isAfter(this.lastActivity.plus(HEARTBEAT_INTERVAL));
+    }
+
     private void checkHeartbeat(boolean alive) {
         if (alive)
-            LOGGER.info("Heartbeat was successful.");
+            LOGGER.debug("Heartbeat was successful.");
         else {
             LOGGER.warn("Heartbeat was not successful! Renewing connection.");
             this.close();
