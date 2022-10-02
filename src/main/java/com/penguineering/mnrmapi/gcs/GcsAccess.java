@@ -1,7 +1,7 @@
 package com.penguineering.mnrmapi.gcs;
 
 import com.penguineering.mnrmapi.auth.Session;
-import com.penguineering.mnrmapi.discovery.ServiceDiscovery;
+import com.penguineering.mnrmapi.Discovery;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
@@ -21,7 +21,7 @@ public class GcsAccess {
     protected Session session;
 
     @Inject
-    protected ServiceDiscovery discovery;
+    protected Discovery discovery;
 
     /**
      * Transform a GCS path to a storage URL

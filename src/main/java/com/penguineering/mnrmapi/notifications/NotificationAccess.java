@@ -1,7 +1,7 @@
 package com.penguineering.mnrmapi.notifications;
 
 import com.penguineering.mnrmapi.auth.Session;
-import com.penguineering.mnrmapi.discovery.ServiceDiscovery;
+import com.penguineering.mnrmapi.Discovery;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.reactor.http.client.websocket.ReactorWebSocketClient;
@@ -31,7 +31,7 @@ public class NotificationAccess implements AutoCloseable {
     private static final Duration CONN_CHECK_INTERVAL = Duration.ofSeconds(1);
 
     @Inject
-    ServiceDiscovery discovery;
+    Discovery discovery;
 
     @Inject
     Session session;

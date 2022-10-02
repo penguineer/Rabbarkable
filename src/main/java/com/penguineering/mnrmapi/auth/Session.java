@@ -1,7 +1,7 @@
 package com.penguineering.mnrmapi.auth;
 
 import com.penguineering.mnrmapi.RmApiConfig;
-import com.penguineering.mnrmapi.discovery.ServiceDiscovery;
+import com.penguineering.mnrmapi.Discovery;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpRequest;
@@ -29,7 +29,7 @@ public class Session {
     protected HttpClient httpClient;
 
     @Inject
-    protected ServiceDiscovery discovery;
+    protected Discovery discovery;
 
     private UserToken userToken; // Note that the token may be accessed in a multithreaded environment
 

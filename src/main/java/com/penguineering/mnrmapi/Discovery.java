@@ -1,38 +1,45 @@
-package com.penguineering.mnrmapi.discovery;
+package com.penguineering.mnrmapi;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
-import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.uri.UriBuilder;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
 
+/**
+ * Service endpoint discovery.
+ *
+ * <p>Construct or discover paths for service endpoints.</p>
+ */
 @Bean
-public class ServiceDiscovery {
+@Singleton
+public class Discovery {
     private static final String SERVICE_MANAGER = "https://webapp-production-dot-remarkable-production.appspot.com";
     private static final String USER_AUTH_PATH = "/token/json/2/user/new";
     private static final URI USER_TOKEN_URI = UriBuilder.of(SERVICE_MANAGER).path(USER_AUTH_PATH).build();
     private static final URI API_URI = URI.create("https://rm-blob-storage-prod.appspot.com/api/v1");
     private static final String API_DOWNLOAD_PATH = "/signed-urls/downloads";
     private static final URI API_DOWNLOAD = UriBuilder.of(API_URI).path(API_DOWNLOAD_PATH).build();
+
+    /* These URIs will be used later
     private static final String API_UPLOAD = API_URI +  "/signed-urls/uploads";
     private static final String SYNC_COMPLETE = API_URI + "/sync-complete";
+     */
+
+    /* This URI does not work (currently/anymore?)
+    private static final URI DOWNLOAD_DISCOVERY_URI = UriBuilder.of("https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df1234567890&apiVer=2").build();
+     */
+
     private static final URI NOTIFICATION_DISCOVERY_URI = UriBuilder.of("https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/notifications?environment=production&apiVer=1").build();
     private static final String NOTIFY_PATH = "/notifications/ws/json/1";
 
-
-    private final HttpClient httpClient;
-    // private final URI documentURI;
-
-    public ServiceDiscovery(@Client HttpClient httpClient) {
-        this.httpClient = httpClient;
-
-        // This URI currently does not work
-        /* this.documentURI = UriBuilder.of("https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df1234567890&apiVer=2")
-                .build(); */
-    }
+    @Inject
+    protected HttpClient httpClient;
 
     /**
      * Fetch the URI for the token renewal endpoint.
@@ -62,7 +69,7 @@ public class ServiceDiscovery {
         return Mono
                 .just(NOTIFICATION_DISCOVERY_URI)
                 .transform(this::retrieveHost)
-                .map(ServiceDiscovery::notificationUriFromHost);
+                .map(Discovery::notificationUriFromHost);
     }
 
     /**
@@ -90,8 +97,22 @@ public class ServiceDiscovery {
                 .map(HttpRequest::GET)
                 .map(req -> httpClient.retrieve(req,  ServiceDiscoveryResult.class))
                 .flatMap(Mono::from)
-                .switchIfEmpty(Mono.error(new Exception("Service discovery did not answer!")))
-                // TODO handle non-OK values
-                .map(ServiceDiscoveryResult::getHost);
+                .switchIfEmpty(Mono.error(new IllegalStateException("Service discovery did not answer!")))
+                .flatMap(res -> res.status.equals("OK")
+                        ? Mono.just(res.host)
+                        : Mono.error(new IllegalStateException("Service discovery was not OK: "+ res.status)));
     }
+
+    /**
+     * Representation of the service discovery result
+     * @param status The recovery status, must be "OK"
+     * @param host Host used to construct the endpoint URI
+     */
+    private record ServiceDiscoveryResult(String status, String host) {
+            private ServiceDiscoveryResult(@JsonProperty(value = "Status") String status,
+                                           @JsonProperty(value = "Host") String host) {
+                this.status = status;
+                this.host = host;
+            }
+        }
 }
