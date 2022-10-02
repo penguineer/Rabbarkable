@@ -106,7 +106,7 @@ public class NotificationAccess implements AutoCloseable {
                 .transform(auth::userAuthenticatedRequest)
                 .flatMap(req -> webSocketClient.connect(NotificationClient.class, req))
                 .single()
-                .doOnNext(cl -> LOGGER.info("New re:markable notification connection: {}", cl));
+                .doOnNext(cl -> LOGGER.info("New reMarkable notification connection: {}", cl));
     }
 
     @PreDestroy
