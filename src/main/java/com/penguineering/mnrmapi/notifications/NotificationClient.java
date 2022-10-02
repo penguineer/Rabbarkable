@@ -20,10 +20,10 @@ public class NotificationClient implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationClient.class);
 
     /**
-     * WebSocket connection times out after 300s; renew 30s before to be on the safe side.
+     * WebSocket connection times out after 300s
      */
     // TODO make this configurable
-    private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(300);
+    private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(3000);
 
     private WebSocketSession session;
 
@@ -31,9 +31,15 @@ public class NotificationClient implements AutoCloseable {
     Disposable heartbeatSubscription = null;
 
     transient private Sinks.Many<NotificationMessage> messageSink = null;
+    transient private Sinks.Many<String> reconnectSink = null;
+
 
     public synchronized void setMessageSink(Sinks.Many<NotificationMessage> messageSink) {
         this.messageSink = messageSink;
+    }
+
+    public synchronized void setReconnectSink(Sinks.Many<String> reconnectSink) {
+        this.reconnectSink = reconnectSink;
     }
 
     @OnOpen
@@ -87,6 +93,9 @@ public class NotificationClient implements AutoCloseable {
 
         if (this.session != null)
             session.close();
+
+        if (this.reconnectSink != null)
+            reconnectSink.tryEmitNext("reconnect new client");
     }
 
     @Override

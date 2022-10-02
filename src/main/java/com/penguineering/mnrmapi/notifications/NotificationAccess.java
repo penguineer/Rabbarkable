@@ -18,7 +18,6 @@ import reactor.util.function.Tuple2;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.time.Duration;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,12 +25,6 @@ import java.util.concurrent.locks.ReentrantLock;
 @Singleton
 public class NotificationAccess implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationAccess.class);
-
-    /**
-     * How often to check if the connection needs to be renewed
-     */
-    // TODO make this configurable
-    private static final Duration CONN_CHECK_INTERVAL = Duration.ofSeconds(1);
 
     @Inject
     Discovery discovery;
@@ -48,17 +41,15 @@ public class NotificationAccess implements AutoCloseable {
     private Disposable reconnectSubscription = null;
 
     private final Sinks.Many<NotificationMessage> messageSink = Sinks.many().multicast().onBackpressureBuffer();
+    private final Sinks.Many<String> reconnectSink = Sinks.many().unicast().onBackpressureBuffer();
 
     @PostConstruct
     public void init() {
         // store the subscription so that re-connect attempts can be cancelled on shutdown
-        reconnectSubscription = Flux
-                // only emits if there is no connection
-                .interval(CONN_CHECK_INTERVAL)
+        reconnectSubscription = reconnectSink.asFlux()
+                // Ignore subsequent requests if already busy
                 .onBackpressureDrop()
-                .filter(this::needsConnection)
-                // Check periodically if a new connection is needed and
-                // store established connections in `this.notificationClient`.
+                // Lock and request a new connection
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(c -> Flux.just(c).zipWith(Mono.fromCallable(() -> {
                             notificationClientLock.lock();
@@ -77,14 +68,8 @@ public class NotificationAccess implements AutoCloseable {
                 // in the setup will only return clients, but not actual
                 // messages.
                 .subscribe(this::updateNotificationClient);
-    }
 
-    /**
-     * @param _attempt running number of connection check
-     * @return true if a new connection is needed
-     */
-    private boolean needsConnection(long _attempt) {
-        return !isConnected();
+        reconnectSink.tryEmitNext("initial connect");
     }
 
     public boolean isConnected() {
@@ -109,6 +94,7 @@ public class NotificationAccess implements AutoCloseable {
 
             this.notificationClient = notificationClient;
             this.notificationClient.setMessageSink(this.messageSink);
+            this.notificationClient.setReconnectSink(this.reconnectSink);
         } finally {
             notificationClientLock.unlock();
         }
