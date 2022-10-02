@@ -18,6 +18,7 @@ import reactor.util.function.Tuple2;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.time.Duration;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -101,12 +102,17 @@ public class NotificationAccess implements AutoCloseable {
     }
 
     private Mono<NotificationClient> connect() {
-        return Flux.from(Mono.defer(() -> discovery.fetchNotificationURI()))
+        return Flux.from(discovery.fetchNotificationURI())
                 .map(HttpRequest::GET)
                 .transform(auth::userAuthenticatedRequest)
                 .flatMap(req -> webSocketClient.connect(NotificationClient.class, req))
                 .single()
-                .doOnNext(cl -> LOGGER.info("New reMarkable notification connection: {}", cl));
+                .doOnNext(cl -> LOGGER.info("New reMarkable notification connection: {}", cl))
+                // retry after 5 seconds
+                .doOnError(throwable ->
+                        Mono.just(throwable.toString())
+                                .delayElement(Duration.ofSeconds(5))
+                                .subscribe(reconnectSink::tryEmitNext));
     }
 
     @PreDestroy
