@@ -33,7 +33,7 @@ public class GcsAccess {
                 .map(FileRequestBody::withGet)
                 .zipWith(
                         // Repeat this result, but not the look-up
-                        discovery.fetchDocumentAPI().repeat(),
+                        discovery.fetchDownloadURI().repeat(),
                         (body, uri) -> HttpRequest
                                 .POST(uri, body)
                                 .header(ACCEPT, "application/json"))

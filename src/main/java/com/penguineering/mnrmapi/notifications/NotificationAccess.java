@@ -85,7 +85,7 @@ public class NotificationAccess implements AutoCloseable {
     }
 
     private Mono<NotificationClient> connect() {
-        return Flux.from(Mono.defer(() -> discovery.fetchNotificationHost()))
+        return Flux.from(Mono.defer(() -> discovery.fetchNotificationURI()))
                 .map(HttpRequest::GET)
                 .transform(session::userAuthenticatedRequest)
                 .flatMap(req -> webSocketClient.connect(NotificationClient.class, req))
