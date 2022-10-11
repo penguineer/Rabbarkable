@@ -10,6 +10,7 @@ The connector is configured with environment variables:
 * `AMQP_USER`: RabbitMQ user
 * `AMQP_PASS`: RabbitMQ password
 * `AMQP_VHOST`: RabbitMQ virtual host, defaults to '/'
+* `AMQP_EXCHANGE`: RabbitMQ binding key to choose the exchange, defaults to `rabbarkable`
 * `RMAPI_DEVICETOKEN`: rmapi device token
 * `PORT`: Port for the HTTP endpoint (default `8080`, only change when running locally!)
 
