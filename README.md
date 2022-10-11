@@ -1,6 +1,6 @@
 # Rabbarkable
 
-> [RabbitMQ](https://www.rabbitmq.com/) (AMQP) connector for the [reMarkable](https://remarkable.com/) [API](https://akeil.de/posts/remarkable-cloud-api/)
+> [RabbitMQ](https://www.rabbitmq.com/) (AMQP) connector for the [reMarkable](https://remarkable.com/) API
 
 ## Configuration
 
@@ -11,7 +11,7 @@ The connector is configured with environment variables:
 * `AMQP_PASS`: RabbitMQ password
 * `AMQP_VHOST`: RabbitMQ virtual host, defaults to '/'
 * `AMQP_EXCHANGE`: RabbitMQ binding key to choose the exchange, defaults to `rabbarkable`
-* `RMAPI_DEVICETOKEN`: rmapi device token
+* `RMAPI_DEVICETOKEN`: reMarkable device token
 * `PORT`: Port for the HTTP endpoint (default `8080`, only change when running locally!)
 
 To obtain the reMarkable device token, you need to register an application with [rmapi](https://github.com/juruen/rmapi) and extract it from your `~/.config/rmapi.conf` file.
@@ -27,7 +27,6 @@ docker run --rm \
   --env-file .env \
   mrtux/rabbarkable
 ```
-
 
 ### Development
 
@@ -59,6 +58,50 @@ docker build .
 The process is coded in the [docker-publish workflow](.github/workflows/docker-publish.yml) and only needs to be
 executed manually for local builds.
 
+
+## API
+
+### reMarkable
+
+A more detailed description on the reMarkable API will follow. The development has heavily benefited from the following
+documents:
+
+* https://docs.google.com/document/d/1peZh79C2BThlp2AC3sITzinAQKJccQ1gn9ppdCIWLl8
+* https://akeil.de/posts/remarkable-cloud-api/
+
+Please note that I currently have only one account and device to test.
+There seem to have been massive changes to the API recently, so please let me know if this implementation does not work.
+I am happy to sort things out and, on the way, improve this project.
+
+### RabbitMQ / AMQP
+
+If the reMarkable API sends a SyncComplete event on the WebSocket (this seems to be the only event left), a similar
+event is sent to the `AMQP_EXCHANGE` with the following JSON form:
+
+```json
+{
+  "timestamp": "<ISO8601 timestamp>",
+  "root": "<GCS id of root document>",
+  "device-id": "<ID of the device that initiated the sync>",
+  "type": "sync complete"
+}
+```
+
+The fields `type` and `device-id` are added as headers (`x-type`, `x-device-id`) to allow value-based binding in a header exchange.
+
+Please note that the `type` is a literal value that signifies a synchronization event.
+
+If the root GCS id is used immediately it may be used to look up the root index. 
+Since there are already lots of API calls invoked, it may be safer to trigger the lookup in conjunction with an index 
+download.
+The root GCS id is mainly intended for cache validation.
+
+**Regarding Reliability:**
+Experiments have shown that the WebSocket implementation cannot detect link failures
+and will happily go on until an external timeout is sent (see [#15](https://github.com/penguineer/Rabbarkable/issues/15)).
+During this period, no notifications are received.
+In this sense SyncComplete events should rather be used to improve latency in a polling observation mode, 
+and not as the lone source of updates.  
 
 ## Maintainers
 
