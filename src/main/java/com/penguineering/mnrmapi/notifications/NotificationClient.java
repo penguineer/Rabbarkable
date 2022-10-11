@@ -129,7 +129,7 @@ public class NotificationClient implements AutoCloseable {
 
     private void checkHeartbeat(boolean alive) {
         if (alive)
-            LOGGER.info("Heartbeat was successful.");
+            LOGGER.debug("Heartbeat was successful.");
         else {
             LOGGER.warn("Heartbeat was not successful! Renewing connection.");
             this.close();
