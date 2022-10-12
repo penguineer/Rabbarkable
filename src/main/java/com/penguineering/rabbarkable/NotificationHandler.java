@@ -4,6 +4,7 @@ import com.penguineering.mnrmapi.index.IndexAccess;
 import com.penguineering.mnrmapi.notifications.NotificationAccess;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Context;
+import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -22,6 +23,7 @@ import java.time.Instant;
 @Bean
 @Singleton
 @Context
+@Requires(notEnv = {"test"})
 public class NotificationHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationHandler.class);
 

@@ -19,12 +19,12 @@ import java.net.URI;
 @Bean
 @Singleton
 public class Discovery {
-    private static final String SERVICE_MANAGER = "https://webapp-production-dot-remarkable-production.appspot.com";
-    private static final String USER_AUTH_PATH = "/token/json/2/user/new";
-    private static final URI USER_TOKEN_URI = UriBuilder.of(SERVICE_MANAGER).path(USER_AUTH_PATH).build();
-    private static final URI API_URI = URI.create("https://rm-blob-storage-prod.appspot.com/api/v1");
-    private static final String API_DOWNLOAD_PATH = "/signed-urls/downloads";
-    private static final URI API_DOWNLOAD = UriBuilder.of(API_URI).path(API_DOWNLOAD_PATH).build();
+    static final String SERVICE_MANAGER = "https://webapp-production-dot-remarkable-production.appspot.com";
+    static final String USER_AUTH_PATH = "/token/json/2/user/new";
+    static final URI USER_TOKEN_URI = UriBuilder.of(SERVICE_MANAGER).path(USER_AUTH_PATH).build();
+    static final URI API_URI = URI.create("https://rm-blob-storage-prod.appspot.com/api/v1");
+    static final String API_DOWNLOAD_PATH = "/signed-urls/downloads";
+    static final URI API_DOWNLOAD = UriBuilder.of(API_URI).path(API_DOWNLOAD_PATH).build();
 
     /* These URIs will be used later
     private static final String API_UPLOAD = API_URI +  "/signed-urls/uploads";
