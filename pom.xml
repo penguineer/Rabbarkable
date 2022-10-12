@@ -120,6 +120,12 @@
       <version>1.0</version>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-test</artifactId>
+      <version>3.4.23</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
