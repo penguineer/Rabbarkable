@@ -35,7 +35,7 @@ public class Discovery {
     private static final URI DOWNLOAD_DISCOVERY_URI = UriBuilder.of("https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df1234567890&apiVer=2").build();
      */
 
-    private static final URI NOTIFICATION_DISCOVERY_URI = UriBuilder.of("https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/notifications?environment=production&apiVer=1").build();
+    static final URI NOTIFICATION_DISCOVERY_URI = UriBuilder.of("https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/notifications?environment=production&apiVer=1").build();
     private static final String NOTIFY_PATH = "/notifications/ws/json/1";
 
     @Inject
