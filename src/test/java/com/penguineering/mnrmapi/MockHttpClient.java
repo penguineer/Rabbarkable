@@ -12,11 +12,12 @@ import jakarta.inject.Singleton;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Bean
 @Singleton  // this is a singleton for test verification
@@ -29,6 +30,14 @@ public class MockHttpClient extends DefaultHttpClient {
      * Allow to set some argument to be evaluated for the next response
      */
     Object nextResponseArg = null;
+
+    /**
+     * Reset all test observation fields for a new test.
+     */
+    public void reset() {
+        requests.clear();
+        nextResponseArg = null;
+    }
 
     @SuppressWarnings("unchecked")
     public <I> void assertRequest(@NonNull io.micronaut.http.HttpRequest<I> expected) {
@@ -57,6 +66,10 @@ public class MockHttpClient extends DefaultHttpClient {
         if (request.getUri().equals(Discovery.USER_TOKEN_URI))
             return exchangeUserAuthentication();
 
+        // Return dummy for notification URL discovery
+        if (request.getUri().equals(Discovery.NOTIFICATION_DISCOVERY_URI))
+            return exchangeNotificationDiscovery();
+
         throw new RuntimeException("HTTP request not caught by mock: " + request);
     }
 
@@ -69,5 +82,22 @@ public class MockHttpClient extends DefaultHttpClient {
 
         return Mono.just(HttpResponse.ok((O) RmApiTestConfig.dummyUserToken));
     }
+
+    @SuppressWarnings("unchecked")
+    public <O> Publisher<HttpResponse<O>> exchangeNotificationDiscovery() {
+        try {
+            // create a DiscoveryResult
+            final Class<?> clazz = Class.forName("com.penguineering.mnrmapi.Discovery$ServiceDiscoveryResult");
+            final Constructor<?> constr = clazz.getDeclaredConstructor(String.class, String.class);
+            constr.setAccessible(true);
+            final Object result = constr.newInstance("OK", TestDiscovery.MOCK_NOTIFY_URI.getHost());
+            // return the result
+            return Mono.just(HttpResponse.ok((O) result));
+        } catch (ClassNotFoundException | InvocationTargetException | NoSuchMethodException | InstantiationException |
+                 IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 }
