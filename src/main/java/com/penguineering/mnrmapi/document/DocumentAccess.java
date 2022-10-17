@@ -3,7 +3,7 @@ package com.penguineering.mnrmapi.document;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.penguineering.mnrmapi.gcs.GcsAccess;
+import com.penguineering.mnrmapi.GCS;
 import com.penguineering.mnrmapi.index.DocumentIndex;
 import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Bean
 public class DocumentAccess {
     @Inject
-    GcsAccess gcsAccess;
+    GCS gcs;
 
     public Flux<Document> retrieveDocument(Flux<DocumentIndex> index) {
         return index
@@ -70,13 +70,13 @@ public class DocumentAccess {
 
     public Flux<Content> retrieveContent(Flux<String> gcsPath) {
         return gcsPath
-                .transform(gcsAccess::retrieve)
+                .transform(gcs::retrieve)
                 .transform(result -> this.unmarshall(result, Content.class));
     }
 
     public Flux<Metadata> retrieveMetaData(Flux<String> gcsPath) {
         return gcsPath
-                .transform(gcsAccess::retrieve)
+                .transform(gcs::retrieve)
                 .transform(result -> this.unmarshall(result, Metadata.class));
     }
 }

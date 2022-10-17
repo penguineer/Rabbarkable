@@ -1,7 +1,6 @@
-package com.penguineering.mnrmapi.gcs;
+package com.penguineering.mnrmapi;
 
-import com.penguineering.mnrmapi.Authentication;
-import com.penguineering.mnrmapi.Discovery;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
@@ -9,11 +8,12 @@ import jakarta.inject.Inject;
 import reactor.core.publisher.Flux;
 
 import java.net.URI;
+import java.time.Instant;
 
 import static io.micronaut.http.HttpHeaders.ACCEPT;
 
 @Bean
-public class GcsAccess {
+public class GCS {
     @Inject
     protected HttpClient httpClient;
 
@@ -54,5 +54,50 @@ public class GcsAccess {
                 .map(HttpRequest::GET)
                 .map(httpClient::retrieve)
                 .flatMap(Flux::from);
+    }
+
+    static class FileRequestBody {
+        public static FileRequestBody withGet(String gcsPath) {
+            return new FileRequestBody("GET", gcsPath);
+        }
+
+        @JsonProperty("http_method")
+        final String method;
+
+        @JsonProperty("relative_path")
+        final String gcsPath;
+
+        FileRequestBody(@JsonProperty("http_method") String method,
+                        @JsonProperty("relative_path") String gcsPath) {
+            this.method = method;
+            this.gcsPath = gcsPath;
+        }
+    }
+
+    static class FileRequestResponse extends FileRequestBody {
+        private final URI url;
+        private final Instant expires;
+
+        FileRequestResponse(@JsonProperty("http_method") String method,
+                            @JsonProperty("relative_path") String gcsPath,
+                            @JsonProperty("url") URI url,
+                            @JsonProperty("expires") Instant expires) {
+            super(method, gcsPath);
+            this.url = url;
+            this.expires = expires;
+        }
+
+        public URI getUrl() {
+            return url;
+        }
+
+        public Instant getExpires() {
+            return expires;
+        }
+
+        @Override
+        public String toString() {
+            return "Download path (expiry %s): %s".formatted(this.expires, this.url);
+        }
     }
 }
