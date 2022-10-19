@@ -9,6 +9,7 @@ import reactor.core.publisher.Flux;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.Objects;
 
 import static io.micronaut.http.HttpHeaders.ACCEPT;
 
@@ -71,6 +72,18 @@ public class GCS {
                         @JsonProperty("relative_path") String gcsPath) {
             this.method = method;
             this.gcsPath = gcsPath;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof FileRequestBody that)) return false;
+            return Objects.equals(method, that.method) && Objects.equals(gcsPath, that.gcsPath);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(method, gcsPath);
         }
     }
 
