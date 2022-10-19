@@ -14,6 +14,8 @@ import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -24,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Replaces(bean = DefaultHttpClient.class)
 @Requires(env = {"test"})
 public class MockHttpClient extends DefaultHttpClient {
+    public static URI GCS_MOCK_RETRIEVAL_URI = URI.create("http://www.example.com/gcs/test");
+
     final List<HttpRequest<?>> requests = new CopyOnWriteArrayList<>();
 
     /**
@@ -70,6 +74,12 @@ public class MockHttpClient extends DefaultHttpClient {
         if (request.getUri().equals(Discovery.NOTIFICATION_DISCOVERY_URI))
             return exchangeNotificationDiscovery();
 
+        if (request.getUri().equals(Discovery.API_DOWNLOAD))
+            return exchangeGcsLookup(request);
+
+        if (request.getUri().equals(GCS_MOCK_RETRIEVAL_URI))
+            return exchangeGcsRetrieve();
+
         throw new RuntimeException("HTTP request not caught by mock: " + request);
     }
 
@@ -99,5 +109,26 @@ public class MockHttpClient extends DefaultHttpClient {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public <O, I> Publisher<HttpResponse<O>> exchangeGcsLookup(@NonNull io.micronaut.http.HttpRequest<I> request) {
 
+        if (request.getBody().isEmpty())
+            return Mono.just(HttpResponse.badRequest());
+
+        GCS.FileRequestBody body = (GCS.FileRequestBody) request.getBody().get();
+
+        HttpResponse<O> resp = (HttpResponse<O>) HttpResponse.ok(
+                new GCS.FileRequestResponse(
+                        "GET",
+                        body.gcsPath,
+                        GCS_MOCK_RETRIEVAL_URI,
+                        Instant.now()));
+
+        return Mono.just(resp);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <O> Publisher<HttpResponse<O>> exchangeGcsRetrieve() {
+        return Mono.just((HttpResponse<O>) HttpResponse.ok("test"));
+    }
 }

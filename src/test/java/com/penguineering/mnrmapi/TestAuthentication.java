@@ -46,21 +46,7 @@ public class TestAuthentication {
         // no further user auth requests should have happened
         assertEquals(0, httpClient.requests.size());
 
-        // expire the user token
-        assertDoesNotThrow(() -> {
-            // get the user token field (hidden in auth)
-            Field userTokenField = Authentication.class.getDeclaredField("userToken");
-            userTokenField.setAccessible(true);
-            Object userToken = userTokenField.get(auth);
-
-            // get the UserToken class (hidden in Authentication)
-            Class<?> userTokenClass = Class.forName(userTokenField.getGenericType().getTypeName());
-            // get the "expires" field (hidden in UserToken)
-            Field expiresField = userTokenClass.getDeclaredField("expires");
-            expiresField.setAccessible(true);
-            // user token now expired 10 seconds ago
-            expiresField.set(userToken, Instant.now().minusSeconds(10));
-        });
+        expireAuth(auth);
 
         // do it again, now it should be like the first time,
         // i.e. the token is renewed
@@ -91,6 +77,29 @@ public class TestAuthentication {
     private MutableHttpRequest<String> createDecoratedRequest() {
         return HttpRequest.<String>GET(URI.create("https://www.example.com/"))
                 .header(AUTHORIZATION, "Bearer " + RmApiTestConfig.dummyUserToken);
+    }
+
+    public static void expireAuth(Authentication auth) {
+        if (auth == null)
+            return;
+
+        // expire the user token
+        assertDoesNotThrow(() -> {
+            // get the user token field (hidden in auth)
+            Field userTokenField = Authentication.class.getDeclaredField("userToken");
+            userTokenField.setAccessible(true);
+            Object userToken = userTokenField.get(auth);
+
+            if (userToken != null) {
+                // get the UserToken class (hidden in Authentication)
+                Class<?> userTokenClass = Class.forName(userTokenField.getGenericType().getTypeName());
+                // get the "expires" field (hidden in UserToken)
+                Field expiresField = userTokenClass.getDeclaredField("expires");
+                expiresField.setAccessible(true);
+                // user token now expired 10 seconds ago
+                expiresField.set(userToken, Instant.now().minusSeconds(10));
+            }
+        });
     }
 
 }
