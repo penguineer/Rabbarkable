@@ -75,11 +75,11 @@ public class DocumentIndex {
     private final String metadataGCS;
     private final Map<String, String> additionalGCS;
 
-    public DocumentIndex(String indexGCS,
-                         String docId,
-                         String contentGCS,
-                         String metadataGCS,
-                         Map<String, String> additionalGCS) {
+    DocumentIndex(String indexGCS,
+                  String docId,
+                  String contentGCS,
+                  String metadataGCS,
+                  Map<String, String> additionalGCS) {
         this.indexGCS = indexGCS;
         this.docId = docId;
         this.contentGCS = contentGCS;
