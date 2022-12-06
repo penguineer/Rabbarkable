@@ -1,6 +1,7 @@
 package com.penguineering.mnrmapi.index;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 public class IndexEntry {
@@ -63,5 +64,12 @@ public class IndexEntry {
                 ", entriesCount=" + entriesCount +
                 ", size=" + size +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof IndexEntry that)) return false;
+        return Objects.equals(gcsPath, that.gcsPath) && Objects.equals(id, that.id) && Objects.equals(entriesCount, that.entriesCount) && Objects.equals(size, that.size);
     }
 }
