@@ -9,7 +9,7 @@ public class IndexEntry {
 
     public static IndexEntry fromLine(String line) {
         String[] parts = line.split(":");
-        if (parts.length < 5)
+        if (parts.length != 5)
             throw new IllegalArgumentException("Line cannot be split into 5 parts: " + line);
 
         final String gcsPath = parts[0];
