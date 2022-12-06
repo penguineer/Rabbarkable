@@ -3,6 +3,7 @@ package com.penguineering.mnrmapi.index;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * An index representing a document on the re:markable tablet.
@@ -120,5 +121,12 @@ public class DocumentIndex {
                 ", indexGCS='" + indexGCS + '\'' +
                 ", length=" + length() +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof DocumentIndex that)) return false;
+        return Objects.equals(indexGCS, that.indexGCS) && Objects.equals(docId, that.docId) && Objects.equals(contentGCS, that.contentGCS) && Objects.equals(metadataGCS, that.metadataGCS) && Objects.equals(additionalGCS, that.additionalGCS);
     }
 }
