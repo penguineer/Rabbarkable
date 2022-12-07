@@ -1,14 +1,16 @@
 package com.penguineering.mnrmapi.index;
 
+import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * An index representing a document on the re:markable tablet.
  */
 public class DocumentIndex {
-    public static Builder buildFromIndexEntry(IndexEntry docRoot) {
+    public static Builder buildFromIndexEntry(@NotNull IndexEntry docRoot) {
         return new Builder(docRoot.getGcsPath(), docRoot.getId());
     }
 
@@ -27,7 +29,7 @@ public class DocumentIndex {
             this.docId = docId;
         }
 
-        public Builder parseIndexEntry(IndexEntry entry) {
+        public Builder parseIndexEntry(@NotNull IndexEntry entry) {
             final String id = entry.getId();
 
             // split doc id
@@ -54,7 +56,7 @@ public class DocumentIndex {
             return this;
         }
 
-        public Builder addAdditionalGCS(String key, String gcs) {
+        public Builder addAdditionalGCS(@NotNull String key, String gcs) {
             this.additionalGCS.put(key, gcs);
             return this;
         }
@@ -75,11 +77,11 @@ public class DocumentIndex {
     private final String metadataGCS;
     private final Map<String, String> additionalGCS;
 
-    public DocumentIndex(String indexGCS,
-                         String docId,
-                         String contentGCS,
-                         String metadataGCS,
-                         Map<String, String> additionalGCS) {
+    DocumentIndex(String indexGCS,
+                  String docId,
+                  String contentGCS,
+                  String metadataGCS,
+                  Map<String, String> additionalGCS) {
         this.indexGCS = indexGCS;
         this.docId = docId;
         this.contentGCS = contentGCS;
@@ -120,5 +122,12 @@ public class DocumentIndex {
                 ", indexGCS='" + indexGCS + '\'' +
                 ", length=" + length() +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof DocumentIndex that)) return false;
+        return Objects.equals(indexGCS, that.indexGCS) && Objects.equals(docId, that.docId) && Objects.equals(contentGCS, that.contentGCS) && Objects.equals(metadataGCS, that.metadataGCS) && Objects.equals(additionalGCS, that.additionalGCS);
     }
 }
